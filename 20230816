@@ -1,0 +1,98 @@
+# MS교육
+
+- 8/16
+Allocation Unit
+IAM SGAM GAM 
+
+8개의 페이지를 다 준다
+fast insert 할때 새로 공간을 할당해서 준다. 
+sp_spaceused → 남은 공간이 많아서 손해 / fast insert 꺼야함. 
+
+- lookup
+lookup을 피해야함. 
+RID lookup
+key lookup(클러스터인덱스)
+
+넌클은 가져오는 건수가 많으면 lookup의 비용이 커진다.
+
+- Fragmentation
+
+- 클러스터인덱스 선정
+정렬, 범위 검색이 잦은 경우
+/계속 증가되는 값일 경우 (fragmentation 최소화)
+PK는 클러스터일 필요가 없다.
+
+유니크하지 않은 것 인덱스 사이즈 > 유니크한 인덱스 사이즈 
+카디널리티가 낮은 컬럼에 클러스터를 붙이면 인덱스 사이즈가 더 커진다. 
+
+dmv
+dm_db_index_usage_stats - Unused 인덱스 찾기 
+dm_db_??               - fragmentation 확인 
+dm_db_missing_index_groups_stats - missing index
+
+reorganize - logical 적인것만 수정
+rebuild - 통계업데이트포함. (새로운공간에 쌓는방식임)
+managed lock priority
+
+- 통계
+SP사용할때 Parameter를 바로 사용하면 Histogram을 참조
+Declare해서 사용하면 Density Vector 참조
+인덱스를 만들면 해당하는 것에 따른 통계를만듬.
+DBCC_SHOW STATISTICS 
+
+- Cardinality Estimation
+2014 이후로 내부 옵티마이저 알고리즘이 많이 바뀌었다.
+
+Independent
+→ where 절의 조건 2개를 독립적으로 보았는데, (old CE)
+→ 2014 이후 관계가 있다고 보아 알고리즘을 바꾸었다. (new CE)
+
+old CE를 쓰는 방법은 호환성모드(2014미만)를 변경하거나, 
+Trace Flag(9481)를 변경하는 방법이있음. 
+쿼리에 직접 use hint(’default_cardinality_estimation’)
+
+sp_updatestats 기존에 있던 샘플이 변경되지 않는다.
+update statistics 샘플을 정해서 할 수 있음.
+인덱스 리빌드 할 경우 (인덱스에 딸린 통계들이 업데이트 된다.)
+
+AUTO_UPDATE_STATISTICS_ASYNC
+통계업데이트가 백단에서 돌게 하는 옵션 
+→ 쿼리가 돌때 통계업데이트와 겹치면 시간이 길어질 수 있음. 그럴때를 대비한 옵션
+
+TEMPTABLE 사용시 리컴파일 발생 (THRESH HOLD에 의해서)
+ROW MODE - 일반적
+BATCH MODE - CCI 
+
+Compiled Plan → 캐싱
+Object Plan  - SP, Function
+SQL Plan      - 나머지 
+
+캐시 - entry, size에 대한 limit이 있다.
+
+Recompile 요인
+인덱스 삭제, SP 변경 등등..
+컴파일 한번 하면 다음 컴파일하기 전까지 컴파일락이 걸림 
+
+제약조건도 옵티마이저에게 큰 힌트가 될 수 있다. 고려해서 구조 만들기
+
+SET SHOWPLAN_ALL ON - 예상만 나옴 실제 데이터 안나오고
+SET STATISTICS PROFILE ON - 예상, 실제 둘다 나옴 
+
+Nested Loop
+
+아우터쪽에 양이적고 이너쪽에 인덱스가 있어야함
+
+어댑티브 조인 (2017부터)
+thresh hold 일정 이하이면 네스티드 룹 조인 
+                 이상이면 해시조인을 타게하는 조인
+
+테스트 해볼것
+ALTER TABLE [dbo].[ProductTest]
+ADD stockValue AS (isnull(([UnitPrice] * ((1.0) - [UnitPriceDiscount])) * [StockQty], (0.0))) PERSISTED;
+
+CREATE INDEX IX_StockValue ON [dbo].[ProductTest](https://www.notion.so/stockValue);
+
+넣을때 stockValue가 바뀌나 ?
+파라미터 스니핑
+프로파일러
+prepared
