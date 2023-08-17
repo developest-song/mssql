@@ -1,0 +1,90 @@
+<백업, 복원>
+shrinkfile 유의점
+
+백업 성능 영향 요소 
+압축, maxtransfersize(Default 1 megabyte), buffercount
+
+recovery time obejct (RTO)
+
+begin tran -> rollback을 못만났을때의 해결책
+Accelerated Database Recovery (mi. sys.databases is_ADR 조회 )
+PVS에 따로 저장하여 나중에 rollback 시 필요한 데이터를 가지고 있는다.
+그리고 trx가 끝났을때 cleaner로 정리를 한다.
+
+azure blobs 
+sas token을 이용해서 credential을 만들고 이로 인해 접근이 가능해진다.
+
+sys.dm_db_log_stats(db_id())
+log_since_last_log_backup_mb (dmf) 용량을 확인하고 로그백업 시점 정할 수 있는 컬럼
+
+<모니터링> 
+sys.dm_exec_connections/ sessions /requests **
+
+sys.dm_os_wait_stats / wait type
+
+sys.dm.exec_query_stats
+sys.dm.exec_sql_text
+sys.dm.exec_query_plan
+
+paas**는 성능카운터를 띄울 수 없으니
+sys.dm_os_performance_counters 를 이용해서 봄(pass 그라파나)
+
+profiler -> extended event
+
+sp_readerrorlog
+
+sys.dm_os_wait_stats 
+Wait type의 주의가 필요한
+LCK_XX - 락
+WRITELOG - 디스크 병목
+PAGEIOLATCH_XX - 요청한 데이터가 메모리에 없어서 가져오는 병목
+PAGELATCH_XX
+CXPACKET - 병렬쿼리 
+SOS_SCHEDULER_YIELD - CPU가 부족할 경우 RUNNABLE 상태가 길어지면 유의해야함
+THREADPOOL - SQL SERVER 행 상태이면 보일 수 있음. WORKER THREAD가 없을 경우 
+CMEMTHREAD - 메모리 고갈 
+RESOURCE_SEMAPHORE - 쿼리를 실행하는데 메모리가 필요할때 (해시 조인 같은것)
+
+SP_CONFIGURE 'OPTIMIZER FOR AD HOC WORKLOADS', 0
+
+in memory oltp
+넌클, Range Scan에 유리하다.
+해시인덱스 (기존의 look up의 개념 )
+기존의 ldf logfile을 같이 쓴다 .
+빨리 쓰는 방법. Natively compiled Stored Procedures를 만들어준다. 
+랫치
+
+<cci>
+ row 1백만건씩 묶어서 열별로 압축을한다.
+deltastore 아직 1백만건이 아닌 것들
+dml 실행시 deltastore에 저장 후 다른 row groups과 머지 후 결과를 내뱉는다.
+
+intelligent query processing (+ 2017 adaptive processing)
+
+temptable , temp variable(통계 업데이트가 안됨, estimate가 고정되어있다.)
+2019부터 한번 테이블을 확인하고 실행계획을 만든다.
+
+t-sql scalar UDF Inlining -> 갔다오는걸 막기 위해서 빌트인일 경우 
+하나의 쿼리(옵티마이저)처럼 실행함(빌트인 fn일 경우)
+- 빌트인 fn을 사용해라, 성능이 다름 .
+
+
+
+sp_spaceused '' 
+
+batch mode
+rowmode 
+
+disticnt(count())
+count(distinct())
+
+rto 빨리올라오는시간
+rpo 로스
+
+AG
+HADR (dmv에도 이 이름으로 되어있음)
+AG 대시보드 유의할 컬럼 
+ suspended
+suspended reason
+log send queue
+redo send queue
